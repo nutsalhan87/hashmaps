@@ -27,7 +27,7 @@ struct entry {
     void *value;
 };
 
-static void resize_if_load_factor_exceeded(struct hashmap_sc *self) {
+static void resize_if_load_factor_exceeded(struct hashmap_sc *const self) {
     if (1. * self->entries_count / self->buckets_count < MAX_LOAD_FACTOR) {
         return;
     }
@@ -71,7 +71,7 @@ static void resize_if_load_factor_exceeded(struct hashmap_sc *self) {
     self->buckets = new_buckets;
 }
 
-static struct entry *hashmap_sc_find_inner(struct hashmap_sc *self, uint64_t key) {
+static struct entry *hashmap_sc_find_inner(struct hashmap_sc *const self, uint64_t key) {
     size_t hash_index = self->hasher(key) % self->buckets_count;
     struct bucket b = self->buckets[hash_index];
     for (size_t i = 0; i < b.size; ++i) {
@@ -93,7 +93,7 @@ struct hashmap_sc *hashmap_sc_new(uint64_t (*hasher)(uint64_t), void (*value_fre
     return self;
 }
 
-bool hashmap_sc_insert(struct hashmap_sc *self, uint64_t key, void *value) {
+bool hashmap_sc_insert(struct hashmap_sc *const self, uint64_t key, void *value) {
     if (self == NULL) {
         return false;
     }
@@ -132,7 +132,7 @@ bool hashmap_sc_insert(struct hashmap_sc *self, uint64_t key, void *value) {
     return true;
 }
 
-void *hashmap_sc_find(struct hashmap_sc *self, uint64_t key) {
+void *hashmap_sc_find(struct hashmap_sc *const self, uint64_t key) {
     if (self == NULL) {
         return NULL;
     }
@@ -145,7 +145,7 @@ void *hashmap_sc_find(struct hashmap_sc *self, uint64_t key) {
     }
 }
 
-bool hashmap_sc_delete(struct hashmap_sc *self, uint64_t key) {
+bool hashmap_sc_delete(struct hashmap_sc *const self, uint64_t key) {
     if (self == NULL) {
         return false;
     }
@@ -168,7 +168,7 @@ bool hashmap_sc_delete(struct hashmap_sc *self, uint64_t key) {
     return false;
 }
 
-void hashmap_sc_clear(struct hashmap_sc *self) {
+void hashmap_sc_clear(struct hashmap_sc *const self) {
     if (self == NULL) {
         return;
     }
@@ -183,7 +183,7 @@ void hashmap_sc_clear(struct hashmap_sc *self) {
     self->entries_count = 0;
 }
 
-void hashmap_sc_free(struct hashmap_sc *self) {
+void hashmap_sc_free(struct hashmap_sc *const self) {
     if (self == NULL) {
         return;
     }

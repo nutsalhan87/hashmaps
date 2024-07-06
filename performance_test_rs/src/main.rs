@@ -114,6 +114,7 @@ fn main() {
         HashMap::separate_chaining,
         HashMap::linear_probing,
         HashMap::quadratic_probing,
+        HashMap::double_hashing,
     ];
 
     for map_factory in map_factories {

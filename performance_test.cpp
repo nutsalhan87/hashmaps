@@ -10,6 +10,7 @@ extern "C" {
 #include "implementations/separate_chaining/hashmap_sc.h"
 #include "implementations/linear_probing/hashmap_lp.h"
 #include "implementations/quadratic_probing/hashmap_qp.h"
+#include "implementations/double_hashing/hashmap_dh.h"
 }
 
 using std::string;
@@ -24,6 +25,10 @@ static uint64_t hasher(uint64_t x) {
     x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
     x = x ^ (x >> 31);
     return x;
+}
+
+static uint64_t hasher2(uint64_t x) {
+    return (hasher(x) << 2) + 1;
 }
 
 struct Hasher {
@@ -116,6 +121,22 @@ public:
         map._del = [](void *self, uint64_t key) { return hashmap_qp_delete((struct hashmap_qp *) self, key); },
         map._clear = [](void *self) { hashmap_qp_clear((struct hashmap_qp *) self); };
         map._free = [](void *self) { hashmap_qp_free((struct hashmap_qp *) self); };
+
+        return map;
+    }
+
+    static hashmap dh() {
+        hashmap map;
+        map.ptr = hashmap_dh_new(hasher, hasher2, value_free<T>),
+        map._label = "Double hashing",
+        map._insert = [](void *self, uint64_t key, T value) {
+            auto value_ptr = std::make_unique<T>(std::move(value)).release();
+            return hashmap_dh_insert((struct hashmap_dh *) self, key, value_ptr);
+        },
+        map._find = [](void *self, uint64_t key) { return (T *) hashmap_dh_find((struct hashmap_dh *) self, key); },
+        map._del = [](void *self, uint64_t key) { return hashmap_dh_delete((struct hashmap_dh *) self, key); },
+        map._clear = [](void *self) { hashmap_dh_clear((struct hashmap_dh *) self); };
+        map._free = [](void *self) { hashmap_dh_free((struct hashmap_dh *) self); };
 
         return map;
     }
@@ -253,8 +274,13 @@ static void test(const std::function<hashmap<uint64_t>()> &map_factory) {
 }
 
 int main(int argc, char *argv[]) {
-    for (auto map_factory: {hashmap<uint64_t>::std, hashmap<uint64_t>::sc, hashmap<uint64_t>::lp,
-                            hashmap<uint64_t>::qp}) {
+    for (auto map_factory: {
+                            hashmap<uint64_t>::std,
+                            hashmap<uint64_t>::sc,
+                            hashmap<uint64_t>::lp,
+                            hashmap<uint64_t>::qp,
+                            hashmap<uint64_t>::dh
+    }) {
         test(map_factory);
     }
 

@@ -1,17 +1,19 @@
-#include "hashmap_lp.h"
+#include "hashmap_dh.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_LOAD_FACTOR 70
 
-struct hashmap_lp {
+struct hashmap_dh {
     uint64_t entries_count;
     uint64_t slots_count;
     struct slot *slots;
     uint64_t distance_limit;
 
-    uint64_t (*hasher)(uint64_t);
+    uint64_t (*hasher1)(uint64_t);
+
+    uint64_t (*hasher2)(uint64_t);
 
     void (*value_free)(void *);
 };
@@ -23,7 +25,8 @@ enum slot_status {
 };
 
 struct slot {
-    uint64_t hash;
+    uint64_t hash1;
+    uint64_t hash2;
     uint64_t key;
     void *value;
     enum slot_status status;
@@ -50,7 +53,7 @@ static uint64_t log2_64(uint64_t value) {
     return tab64[((uint64_t) ((value - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
 }
 
-static void resize_map(struct hashmap_lp *const self) {
+static void resize_map(struct hashmap_dh *const self) {
     size_t new_slots_count = 2 * self->slots_count;
     struct slot *new_slots = calloc(new_slots_count, sizeof(struct slot));
 
@@ -60,10 +63,11 @@ static void resize_map(struct hashmap_lp *const self) {
             continue;
         }
 
-        uint64_t hash = old_slots[i].hash;
-        uint64_t new_hash_index = hash % new_slots_count;
-        for (size_t j = 0; new_slots[new_hash_index].status == occupied; ++j) {
-            new_hash_index = (hash + j) % new_slots_count;
+        uint64_t hash1 = old_slots[i].hash1;
+        uint64_t hash2 = old_slots[i].hash2;
+        uint64_t new_hash_index = hash1 % new_slots_count;
+        for (size_t j = 1; new_slots[new_hash_index].status == occupied; ++j) {
+            new_hash_index = (hash1 + hash2 * j) % new_slots_count;
         }
         memcpy(new_slots + new_hash_index, old_slots + i, sizeof(struct slot));
     }
@@ -73,9 +77,10 @@ static void resize_map(struct hashmap_lp *const self) {
     self->distance_limit = log2_64(new_slots_count);
 }
 
-static struct slot *hashmap_lp_find_inner(struct hashmap_lp *const self, uint64_t key) {
-    uint64_t hash = self->hasher(key);
-    struct slot *slot = self->slots + hash % self->slots_count;
+static struct slot *hashmap_dh_find_inner(struct hashmap_dh *const self, uint64_t key) {
+    uint64_t hash1 = self->hasher1(key);
+    uint64_t hash2 = self->hasher2(key);
+    struct slot *slot = self->slots + hash1 % self->slots_count;
     for (size_t i = 1; i < self->distance_limit; ++i) {
         if (slot->status == vacant) {
             return NULL;
@@ -83,25 +88,27 @@ static struct slot *hashmap_lp_find_inner(struct hashmap_lp *const self, uint64_
         if (slot->status == occupied && slot->key == key) {
             return slot;
         }
-        slot = self->slots + (hash + i) % self->slots_count;
+        slot = self->slots + (hash1 + hash2 * i) % self->slots_count;
     }
 
     return NULL;
 }
 
-struct hashmap_lp *hashmap_lp_new(uint64_t (*hasher)(uint64_t), void (*value_free)(void *)) {
-    struct hashmap_lp *self = malloc(sizeof(struct hashmap_lp));
+struct hashmap_dh *
+hashmap_dh_new(uint64_t (*hasher1)(uint64_t), uint64_t (*hasher2)(uint64_t), void (*value_free)(void *)) {
+    struct hashmap_dh *self = malloc(sizeof(struct hashmap_dh));
     self->entries_count = 0;
     self->slots_count = 10;
     self->slots = calloc(self->slots_count, sizeof(struct slot));
     self->distance_limit = log2_64(10);
-    self->hasher = hasher;
+    self->hasher1 = hasher1;
+    self->hasher2 = hasher2;
     self->value_free = value_free;
 
     return self;
 }
 
-bool hashmap_lp_insert(struct hashmap_lp *const self, uint64_t key, void *value) {
+bool hashmap_dh_insert(struct hashmap_dh *const self, uint64_t key, void *value) {
     if (self == NULL) {
         return false;
     }
@@ -110,14 +117,16 @@ bool hashmap_lp_insert(struct hashmap_lp *const self, uint64_t key, void *value)
         resize_map(self);
     }
 
-    uint64_t hash = self->hasher(key);
+    uint64_t hash1 = self->hasher1(key);
+    uint64_t hash2 = self->hasher2(key);
     while (1) {
-        struct slot *slot = self->slots + hash % self->slots_count;
+        struct slot *slot = self->slots + hash1 % self->slots_count;
         for (size_t i = 1; i < self->distance_limit; ++i) {
             if (slot->status != occupied) {
                 slot->key = key;
                 slot->value = value;
-                slot->hash = hash;
+                slot->hash1 = hash1;
+                slot->hash2 = hash2;
                 slot->status = occupied;
                 self->entries_count++;
                 return true;
@@ -127,18 +136,18 @@ bool hashmap_lp_insert(struct hashmap_lp *const self, uint64_t key, void *value)
                 slot->value = value;
                 return true;
             }
-            slot = self->slots + (hash + i) % self->slots_count;
+            slot = self->slots + (hash1 + hash2 * i) % self->slots_count;
         }
         resize_map(self);
     }
 }
 
-void *hashmap_lp_find(struct hashmap_lp *const self, uint64_t key) {
+void *hashmap_dh_find(struct hashmap_dh *const self, uint64_t key) {
     if (self == NULL) {
         return NULL;
     }
 
-    struct slot *slot = hashmap_lp_find_inner(self, key);
+    struct slot *slot = hashmap_dh_find_inner(self, key);
     if (slot == NULL) {
         return NULL;
     } else {
@@ -146,12 +155,12 @@ void *hashmap_lp_find(struct hashmap_lp *const self, uint64_t key) {
     }
 }
 
-bool hashmap_lp_delete(struct hashmap_lp *const self, uint64_t key) {
+bool hashmap_dh_delete(struct hashmap_dh *const self, uint64_t key) {
     if (self == NULL) {
         return false;
     }
 
-    struct slot *slot = hashmap_lp_find_inner(self, key);
+    struct slot *slot = hashmap_dh_find_inner(self, key);
     if (slot == NULL) {
         return false;
     } else {
@@ -162,7 +171,7 @@ bool hashmap_lp_delete(struct hashmap_lp *const self, uint64_t key) {
     }
 }
 
-void hashmap_lp_clear(struct hashmap_lp *const self) {
+void hashmap_dh_clear(struct hashmap_dh *const self) {
     if (self == NULL) {
         return;
     }
@@ -176,7 +185,7 @@ void hashmap_lp_clear(struct hashmap_lp *const self) {
     self->entries_count = 0;
 }
 
-void hashmap_lp_free(struct hashmap_lp *const self) {
+void hashmap_dh_free(struct hashmap_dh *const self) {
     if (self == NULL) {
         return;
     }
@@ -188,3 +197,4 @@ void hashmap_lp_free(struct hashmap_lp *const self) {
     free(self->slots);
     free(self);
 }
+

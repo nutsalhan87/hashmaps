@@ -4,12 +4,19 @@ extern crate bindgen;
 extern crate cc;
 
 fn main() {
-    println!("cargo:rerun-if-changed=../implementations/separate_chaining/hashmap_sc.h");
-    println!("cargo:rerun-if-changed=../implementations/separate_chaining/hashmap_sc.c");
-    println!("cargo:rerun-if-changed=../implementations/linear_probing/hashmap_lp.c");
-    println!("cargo:rerun-if-changed=../implementations/linear_probing/hashmap_lp.h");
-    println!("cargo:rerun-if-changed=../implementations/quadratic_probing/hashmap_qp.c");
-    println!("cargo:rerun-if-changed=../implementations/quadratic_probing/hashmap_qp.h");
+    let mut build = cc::Build::new();
+    build.flag("-O3");
+
+    for source in [
+        "separate_chaining/hashmap_sc",
+        "linear_probing/hashmap_lp",
+        "quadratic_probing/hashmap_qp",
+        "double_hashing/hashmap_dh",
+    ] {
+        println!("cargo:rerun-if-changed=../implementations/{}.h", source);
+        println!("cargo:rerun-if-changed=../implementations/{}.c", source);
+        build.file(format!("../implementations/{}.c", source));
+    }
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-lib=static=hashmaps");
 
@@ -21,11 +28,5 @@ fn main() {
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 
-    let mut build = cc::Build::new();
-    build
-        .flag("-O3")
-        .file("../implementations/separate_chaining/hashmap_sc.c")
-        .file("../implementations/linear_probing/hashmap_lp.c")
-        .file("../implementations/quadratic_probing/hashmap_qp.c")
-        .compile("hashmaps");
+    build.compile("hashmaps");
 }

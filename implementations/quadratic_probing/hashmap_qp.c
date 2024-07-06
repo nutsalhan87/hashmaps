@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LOAD_FACTOR 0.7
+#define MAX_LOAD_FACTOR 70
 #define C1 1
 #define C2 1
 
 struct hashmap_qp {
-    uint32_t entries_count;
-    uint32_t slots_count;
+    uint64_t entries_count;
+    uint64_t slots_count;
     struct slot *slots;
     uint64_t distance_limit;
 
@@ -52,7 +52,7 @@ static uint64_t log2_64(uint64_t value) {
     return tab64[((uint64_t) ((value - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
 }
 
-static void resize_map(struct hashmap_qp *self) {
+static void resize_map(struct hashmap_qp *const self) {
     size_t new_slots_count = 2 * self->slots_count;
     struct slot *new_slots = calloc(new_slots_count, sizeof(struct slot));
 
@@ -62,10 +62,10 @@ static void resize_map(struct hashmap_qp *self) {
             continue;
         }
 
-        uint64_t new_initial_hash_index = old_slots[i].hash % new_slots_count;
-        uint64_t new_hash_index = new_initial_hash_index;
-        for (size_t j = 0; new_slots[new_hash_index].status == occupied; ++j) {
-            new_hash_index = (new_initial_hash_index + C1 * j + C2 * j * j) % new_slots_count;
+        uint64_t hash = old_slots[i].hash;
+        uint64_t new_hash_index = hash % new_slots_count;
+        for (size_t j = 1; new_slots[new_hash_index].status == occupied; ++j) {
+            new_hash_index = (hash + C1 * j + C2 * j * j) % new_slots_count;
         }
         memcpy(new_slots + new_hash_index, old_slots + i, sizeof(struct slot));
     }
@@ -75,17 +75,17 @@ static void resize_map(struct hashmap_qp *self) {
     self->distance_limit = log2_64(new_slots_count);
 }
 
-static struct slot *hashmap_qp_find_inner(struct hashmap_qp *self, uint64_t key) {
-    size_t hash_index = self->hasher(key) % self->slots_count;
-    struct slot *slot;
-    for (size_t i = 0; i < self->distance_limit; ++i) {
-        slot = self->slots + ((hash_index + C1 * i + C2 * i * i) % self->slots_count);
+static struct slot *hashmap_qp_find_inner(struct hashmap_qp *const self, uint64_t key) {
+    uint64_t hash = self->hasher(key);
+    struct slot *slot = self->slots + hash % self->slots_count;
+    for (size_t i = 1; i < self->distance_limit; ++i) {
         if (slot->status == vacant) {
             return NULL;
         }
         if (slot->status == occupied && slot->key == key) {
             return slot;
         }
+        slot = self->slots + (hash + C1 * i + C2 * i * i) % self->slots_count;
     }
 
     return NULL;
@@ -103,23 +103,19 @@ struct hashmap_qp *hashmap_qp_new(uint64_t (*hasher)(uint64_t), void (*value_fre
     return self;
 }
 
-bool hashmap_qp_insert(struct hashmap_qp *self, uint64_t key, void *value) {
+bool hashmap_qp_insert(struct hashmap_qp *const self, uint64_t key, void *value) {
     if (self == NULL) {
         return false;
     }
 
-    if (1. * self->entries_count / self->slots_count >= MAX_LOAD_FACTOR) {
+    if (100 * self->entries_count / self->slots_count >= MAX_LOAD_FACTOR) {
         resize_map(self);
     }
 
     uint64_t hash = self->hasher(key);
     while (1) {
-        struct slot *slot;
-        size_t hash_index = hash % self->slots_count;
-        size_t i = 0;
-        do {
-            slot = self->slots + ((hash_index + C1 * i + C2 * i * i) % self->slots_count);
-
+        struct slot *slot = self->slots + hash % self->slots_count;
+        for (size_t i = 1; i < self->distance_limit; ++i) {
             if (slot->status != occupied) {
                 slot->key = key;
                 slot->value = value;
@@ -133,13 +129,13 @@ bool hashmap_qp_insert(struct hashmap_qp *self, uint64_t key, void *value) {
                 slot->value = value;
                 return true;
             }
-            ++i;
-        } while (i < self->distance_limit);
+            slot = self->slots + (hash + C1 * i + C2 * i * i) % self->slots_count;
+        }
         resize_map(self);
     }
 }
 
-void *hashmap_qp_find(struct hashmap_qp *self, uint64_t key) {
+void *hashmap_qp_find(struct hashmap_qp *const self, uint64_t key) {
     if (self == NULL) {
         return NULL;
     }
@@ -152,7 +148,7 @@ void *hashmap_qp_find(struct hashmap_qp *self, uint64_t key) {
     }
 }
 
-bool hashmap_qp_delete(struct hashmap_qp *self, uint64_t key) {
+bool hashmap_qp_delete(struct hashmap_qp *const self, uint64_t key) {
     if (self == NULL) {
         return false;
     }
@@ -168,7 +164,7 @@ bool hashmap_qp_delete(struct hashmap_qp *self, uint64_t key) {
     }
 }
 
-void hashmap_qp_clear(struct hashmap_qp *self) {
+void hashmap_qp_clear(struct hashmap_qp *const self) {
     if (self == NULL) {
         return;
     }
@@ -182,7 +178,7 @@ void hashmap_qp_clear(struct hashmap_qp *self) {
     self->entries_count = 0;
 }
 
-void hashmap_qp_free(struct hashmap_qp *self) {
+void hashmap_qp_free(struct hashmap_qp *const self) {
     if (self == NULL) {
         return;
     }

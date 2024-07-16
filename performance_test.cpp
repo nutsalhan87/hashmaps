@@ -57,20 +57,20 @@ class hashmap {
 public:
     static hashmap std() {
         hashmap map;
-        map.ptr = new unordered_map<uint64_t, T, Hasher>(),
-        map._label = "STL",
+        map.ptr = new unordered_map<uint64_t, T, Hasher>();
+        map._label = "STL";
         map._insert = [](void *self, uint64_t key, T value) {
             ((unordered_map<uint64_t, T, Hasher> *) self)->insert({key, value});
             return true;
-        },
+        };
         map._find = [](void *self, uint64_t key) {
             auto map = (unordered_map<uint64_t, T, Hasher> *) self;
             auto it = map->find(key);
             return it != map->end() ? &it->second : nullptr;
-        },
+        };
         map._del = [](void *self, uint64_t key) {
             return ((unordered_map<uint64_t, T, Hasher> *) self)->erase(key) == 1;
-        },
+        };
         map._clear = [](void *self) { ((unordered_map<uint64_t, T, Hasher> *) self)->clear(); };
         map._free = [](void *self) { delete (unordered_map<uint64_t, T, Hasher> *) self; };
 
@@ -79,14 +79,14 @@ public:
 
     static hashmap sc() {
         hashmap map;
-        map.ptr = hashmap_sc_new(hasher, value_free<T>),
-        map._label = "Separate chaining",
+        map.ptr = hashmap_sc_new(hasher, value_free<T>);
+        map._label = "Separate chaining";
         map._insert = [](void *self, uint64_t key, T value) {
             auto value_ptr = std::make_unique<T>(std::move(value)).release();
             return hashmap_sc_insert((struct hashmap_sc *) self, key, value_ptr);
-        },
-        map._find = [](void *self, uint64_t key) { return (T *) hashmap_sc_find((struct hashmap_sc *) self, key); },
-        map._del = [](void *self, uint64_t key) { return hashmap_sc_delete((struct hashmap_sc *) self, key); },
+        };
+        map._find = [](void *self, uint64_t key) { return (T *) hashmap_sc_find((struct hashmap_sc *) self, key); };
+        map._del = [](void *self, uint64_t key) { return hashmap_sc_delete((struct hashmap_sc *) self, key); };
         map._clear = [](void *self) { hashmap_sc_clear((struct hashmap_sc *) self); };
         map._free = [](void *self) { hashmap_sc_free((struct hashmap_sc *) self); };
 
@@ -95,14 +95,14 @@ public:
 
     static hashmap lp() {
         hashmap map;
-        map.ptr = hashmap_lp_new(hasher, value_free<T>),
-        map._label = "Linear probing",
+        map.ptr = hashmap_lp_new(hasher, value_free<T>);
+        map._label = "Linear probing";
         map._insert = [](void *self, uint64_t key, T value) {
             auto value_ptr = std::make_unique<T>(std::move(value)).release();
             return hashmap_lp_insert((struct hashmap_lp *) self, key, value_ptr);
-        },
-        map._find = [](void *self, uint64_t key) { return (T *) hashmap_lp_find((struct hashmap_lp *) self, key); },
-        map._del = [](void *self, uint64_t key) { return hashmap_lp_delete((struct hashmap_lp *) self, key); },
+        };
+        map._find = [](void *self, uint64_t key) { return (T *) hashmap_lp_find((struct hashmap_lp *) self, key); };
+        map._del = [](void *self, uint64_t key) { return hashmap_lp_delete((struct hashmap_lp *) self, key); };
         map._clear = [](void *self) { hashmap_lp_clear((struct hashmap_lp *) self); };
         map._free = [](void *self) { hashmap_lp_free((struct hashmap_lp *) self); };
 
@@ -111,14 +111,14 @@ public:
 
     static hashmap qp() {
         hashmap map;
-        map.ptr = hashmap_qp_new(hasher, value_free<T>),
-        map._label = "Quadratic probing",
+        map.ptr = hashmap_qp_new(hasher, value_free<T>);
+        map._label = "Quadratic probing";
         map._insert = [](void *self, uint64_t key, T value) {
             auto value_ptr = std::make_unique<T>(std::move(value)).release();
             return hashmap_qp_insert((struct hashmap_qp *) self, key, value_ptr);
-        },
-        map._find = [](void *self, uint64_t key) { return (T *) hashmap_qp_find((struct hashmap_qp *) self, key); },
-        map._del = [](void *self, uint64_t key) { return hashmap_qp_delete((struct hashmap_qp *) self, key); },
+        };
+        map._find = [](void *self, uint64_t key) { return (T *) hashmap_qp_find((struct hashmap_qp *) self, key); };
+        map._del = [](void *self, uint64_t key) { return hashmap_qp_delete((struct hashmap_qp *) self, key); };
         map._clear = [](void *self) { hashmap_qp_clear((struct hashmap_qp *) self); };
         map._free = [](void *self) { hashmap_qp_free((struct hashmap_qp *) self); };
 
@@ -127,14 +127,14 @@ public:
 
     static hashmap dh() {
         hashmap map;
-        map.ptr = hashmap_dh_new(hasher, hasher2, value_free<T>),
-        map._label = "Double hashing",
+        map.ptr = hashmap_dh_new(hasher, hasher2, value_free<T>);
+        map._label = "Double hashing";
         map._insert = [](void *self, uint64_t key, T value) {
             auto value_ptr = std::make_unique<T>(std::move(value)).release();
             return hashmap_dh_insert((struct hashmap_dh *) self, key, value_ptr);
-        },
-        map._find = [](void *self, uint64_t key) { return (T *) hashmap_dh_find((struct hashmap_dh *) self, key); },
-        map._del = [](void *self, uint64_t key) { return hashmap_dh_delete((struct hashmap_dh *) self, key); },
+        };
+        map._find = [](void *self, uint64_t key) { return (T *) hashmap_dh_find((struct hashmap_dh *) self, key); };
+        map._del = [](void *self, uint64_t key) { return hashmap_dh_delete((struct hashmap_dh *) self, key); };
         map._clear = [](void *self) { hashmap_dh_clear((struct hashmap_dh *) self); };
         map._free = [](void *self) { hashmap_dh_free((struct hashmap_dh *) self); };
 

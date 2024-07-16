@@ -73,10 +73,10 @@ static void resize_map(struct hashmap_lp *const self) {
     self->distance_limit = log2_64(new_slots_count);
 }
 
-static struct slot *hashmap_lp_find_inner(struct hashmap_lp *const self, uint64_t key) {
+static struct slot *find_inner(struct hashmap_lp *const self, uint64_t key) {
     uint64_t hash = self->hasher(key);
     struct slot *slot = self->slots + hash % self->slots_count;
-    for (size_t i = 1; i < self->distance_limit; ++i) {
+    for (size_t i = 1; i <= self->distance_limit; ++i) {
         if (slot->status == vacant) {
             return NULL;
         }
@@ -113,7 +113,7 @@ bool hashmap_lp_insert(struct hashmap_lp *const self, uint64_t key, void *value)
     uint64_t hash = self->hasher(key);
     while (1) {
         struct slot *slot = self->slots + hash % self->slots_count;
-        for (size_t i = 1; i < self->distance_limit; ++i) {
+        for (size_t i = 1; i <= self->distance_limit; ++i) {
             if (slot->status != occupied) {
                 slot->key = key;
                 slot->value = value;
@@ -138,7 +138,7 @@ void *hashmap_lp_find(struct hashmap_lp *const self, uint64_t key) {
         return NULL;
     }
 
-    struct slot *slot = hashmap_lp_find_inner(self, key);
+    struct slot *slot = find_inner(self, key);
     if (slot == NULL) {
         return NULL;
     } else {
@@ -151,7 +151,7 @@ bool hashmap_lp_delete(struct hashmap_lp *const self, uint64_t key) {
         return false;
     }
 
-    struct slot *slot = hashmap_lp_find_inner(self, key);
+    struct slot *slot = find_inner(self, key);
     if (slot == NULL) {
         return false;
     } else {

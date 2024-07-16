@@ -71,7 +71,7 @@ static void resize_if_load_factor_exceeded(struct hashmap_sc *const self) {
     self->buckets = new_buckets;
 }
 
-static struct entry *hashmap_sc_find_inner(struct hashmap_sc *const self, uint64_t key) {
+static struct entry *find_inner(struct hashmap_sc *const self, uint64_t key) {
     size_t hash_index = self->hasher(key) % self->buckets_count;
     struct bucket b = self->buckets[hash_index];
     for (size_t i = 0; i < b.size; ++i) {
@@ -98,7 +98,7 @@ bool hashmap_sc_insert(struct hashmap_sc *const self, uint64_t key, void *value)
         return false;
     }
 
-    struct entry *c = hashmap_sc_find_inner(self, key);
+    struct entry *c = find_inner(self, key);
     if (c != NULL) {
         self->value_free(c->value);
         c->value = value;
@@ -137,7 +137,7 @@ void *hashmap_sc_find(struct hashmap_sc *const self, uint64_t key) {
         return NULL;
     }
 
-    struct entry *e = hashmap_sc_find_inner(self, key);
+    struct entry *e = find_inner(self, key);
     if (e == NULL) {
         return NULL;
     } else {

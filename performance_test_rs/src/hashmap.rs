@@ -17,7 +17,8 @@ extern "C" fn hasher(value: u64) -> u64 {
 }
 
 extern "C" fn hasher2(value: u64) -> u64 {
-    (hasher(value) << 2) + 1
+    const HASHER: Lazy<RandomState> = Lazy::new(|| RandomState::new());
+    HASHER.hash_one(value)
 }
 
 unsafe extern "C" fn free_value<T>(value: *mut c_void) {

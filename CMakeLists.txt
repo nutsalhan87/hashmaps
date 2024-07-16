@@ -14,4 +14,5 @@ add_executable(separate_chaining_test implementations/separate_chaining/hashmap_
 add_executable(linear_probing_test implementations/linear_probing/hashmap_lp_test.c ${LINEAR_PROBING})
 add_executable(quadratic_probing_test implementations/quadratic_probing/hashmap_qp_test.c ${QUADRATIC_PROBING})
 add_executable(double_hashing_test implementations/double_hashing/hashmap_dh_test.c ${DOUBLE_HASHING})
+
 add_executable(performance_test performance_test.cpp ${SEPARATE_CHAINING} ${LINEAR_PROBING} ${QUADRATIC_PROBING} ${DOUBLE_HASHING})

@@ -123,7 +123,7 @@ fn main() {
             let (test_title, start) = test(map_factory);
             let elapsed = Instant::now().duration_since(start);
             println!(
-                "{}. Elapsed time: {:.9}s.",
+                "{}. Elapsed time: {:.6}s.",
                 test_title,
                 elapsed.as_secs_f32()
             )
